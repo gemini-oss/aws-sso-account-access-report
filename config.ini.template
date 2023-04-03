@@ -1,0 +1,6 @@
+[DEFAULT]
+region = us-east-1
+identity_store_id = d-12456789a1
+sso_instance_arn = arn:aws:sso:::instance/ssoins-123456789101112a
+org_id = o-12345678ab
+num_workers = 10
