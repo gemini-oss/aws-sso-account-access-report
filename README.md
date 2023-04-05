@@ -14,6 +14,7 @@ region = <AWS_REGION>
 identity_store_id = <IDENTITY_STORE_ID>
 sso_instance_arn = <SSO_INSTANCE_ARN>
 org_id = <AWS_ORG_ID>
+num_workers = <INT_NUM_WORKERS>
 ```
 
 Replace <AWS_REGION>, <IDENTITY_STORE_ID>, <SSO_INSTANCE_ARN>, and <AWS_ORG_ID> with the appropriate values for your environment.
