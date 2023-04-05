@@ -90,24 +90,13 @@ def list_permission_set_arns(sso_instance_arn: str, region: str) -> List[str]:
     :return: A list of permission set ARNs.
     """
     sso_admin_client = boto3.client("sso-admin", region_name=region)
+
+    paginator = sso_admin_client.get_paginator("list_permission_sets")
+    response_iterator = paginator.paginate(InstanceArn=sso_instance_arn)
+
     permission_set_arns = []
-    next_token = None
-
-    while True:
-        if next_token:
-            response = sso_admin_client.list_permission_sets(
-                InstanceArn=sso_instance_arn, NextToken=next_token
-            )
-        else:
-            response = sso_admin_client.list_permission_sets(
-                InstanceArn=sso_instance_arn
-            )
-
+    for response in response_iterator:
         permission_set_arns.extend(response["PermissionSets"])
-
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
 
     return permission_set_arns
 
@@ -139,19 +128,13 @@ def list_accounts(org_id: str, region: str) -> List[Dict[str, str]]:
     :return: A list of AWS Organization accounts.
     """
     org_client = boto3.client("organizations", region_name=region)
+
+    paginator = org_client.get_paginator("list_accounts")
+    response_iterator = paginator.paginate()
+
     accounts = []
-
-    response = org_client.list_accounts(MaxResults=20)
-    while True:
-        for account in response["Accounts"]:
-            accounts.append({"Id": account["Id"], "Name": account["Name"]})
-
-        if "NextToken" in response:
-            response = org_client.list_accounts(
-                MaxResults=20, NextToken=response["NextToken"]
-            )
-        else:
-            break
+    for response in response_iterator:
+        accounts.extend(response["Accounts"])
 
     return accounts
 
@@ -168,34 +151,20 @@ def list_user_ids_for_group(
     :return: A list of user IDs belonging to the specified group.
     """
     identity_store_client = boto3.client("identitystore", region_name=region)
+    paginator = identity_store_client.get_paginator("list_group_memberships")
+    response_iterator = paginator.paginate(
+        IdentityStoreId=identity_store_id, GroupId=group_id
+    )
+
     user_ids = []
-    next_token = None
-
-    # Paginate through the list of group memberships for the given group_id
-    while True:
-        if next_token:
-            response = identity_store_client.list_group_memberships(
-                IdentityStoreId=identity_store_id,
-                GroupId=group_id,
-                NextToken=next_token,
-            )
-        else:
-            response = identity_store_client.list_group_memberships(
-                IdentityStoreId=identity_store_id, GroupId=group_id
-            )
-
-        # Extract user IDs from the group memberships and add them to user_ids list
+    # Extract user IDs from the group memberships and add them to user_ids list
+    for response in response_iterator:
         user_ids.extend(
             [
                 membership["MemberId"]["UserId"]
                 for membership in response["GroupMemberships"]
             ]
         )
-
-        # Update the next_token for pagination
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
 
     return user_ids
 
