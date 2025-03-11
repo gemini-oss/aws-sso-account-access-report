@@ -1,10 +1,12 @@
-import configparser
 import logging
-import boto3
-import csv
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Tuple, Union
+import configparser
+import csv
+from typing import Dict, List, Tuple
+
+import boto3
+from retry import retry
+
 
 # Read configuration
 config = configparser.ConfigParser()
@@ -15,8 +17,14 @@ identity_store_id = config.get("DEFAULT", "identity_store_id")
 sso_instance_arn = config.get("DEFAULT", "sso_instance_arn")
 aws_org_id = config.get("DEFAULT", "org_id")
 num_workers = int(config.get("DEFAULT", "num_workers"))
+max_retries = int(config.get("DEFAULT", "max_retries"))
+
+# Get optional account filter (comma-separated list of account IDs)
+account_filter_str = config.get("DEFAULT", "account_filter", fallback="")
+account_filter = [account.strip() for account in account_filter_str.split(",")] if account_filter_str else []
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_groups(identity_store_id: str, region: str) -> List[Dict[str, str]]:
     """
     List groups in Identity Store.
@@ -35,6 +43,7 @@ def list_groups(identity_store_id: str, region: str) -> List[Dict[str, str]]:
     return groups
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_users(identity_store_id: str, region: str) -> List[Dict[str, str]]:
     """
     List users in Identity Store.
@@ -53,6 +62,7 @@ def list_users(identity_store_id: str, region: str) -> List[Dict[str, str]]:
     return users
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def get_account_assignments(
     sso_instance_arn: str, account_id: str, permission_set_arn: str, region: str
 ) -> List[Dict[str, str]]:
@@ -81,6 +91,7 @@ def get_account_assignments(
     return account_assignments
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_permission_set_arns(sso_instance_arn: str, region: str) -> List[str]:
     """
     List permission set ARNs for an SSO instance.
@@ -101,6 +112,7 @@ def list_permission_set_arns(sso_instance_arn: str, region: str) -> List[str]:
     return permission_set_arns
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def get_permission_set_name(
     permission_set_arn: str, sso_instance_arn: str, region: str
 ) -> str:
@@ -119,6 +131,7 @@ def get_permission_set_name(
     return response["PermissionSet"]["Name"]
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_accounts(org_id: str, region: str) -> List[Dict[str, str]]:
     """
     List AWS Organization accounts.
@@ -139,6 +152,7 @@ def list_accounts(org_id: str, region: str) -> List[Dict[str, str]]:
     return accounts
 
 
+@retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_user_ids_for_group(
     identity_store_id: str, group_id: str, region: str
 ) -> List[str]:
@@ -252,6 +266,12 @@ def main() -> None:
         f"Getting info on org_accounts, permission sets, SSO groups and SSO users"
     )
     org_accounts = list_accounts(aws_org_id, region)
+    
+    # Filter accounts if account_filter is specified
+    if account_filter:
+        logging.info(f"Filtering accounts based on account filter: {account_filter}")
+        org_accounts = [account for account in org_accounts if account["Id"] in account_filter]
+        logging.info(f"Filtered to {len(org_accounts)} accounts")
     perm_sets = list_permission_set_arns(sso_instance_arn, region)
     groups = list_groups(identity_store_id, region)
     users = list_users(identity_store_id, region)
@@ -260,6 +280,7 @@ def main() -> None:
     logging.info(f"Getting info group_members_details")
     group_members_details = []
     for group in groups:
+        logging.info(f"Getting info for {group}")
         group_name = group["DisplayName"]
         group_member_names = []
 
