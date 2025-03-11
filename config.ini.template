@@ -5,3 +5,7 @@ sso_instance_arn = arn:aws:sso:::instance/ssoins-123456789101112a
 org_id = o-12345678ab
 num_workers = 20
 max_retries = 5
+# Optional: Comma-separated list of account IDs to filter processing
+# If not specified, all accounts will be processed
+# Example: account_filter = 123456789012,234567890123
+account_filter =

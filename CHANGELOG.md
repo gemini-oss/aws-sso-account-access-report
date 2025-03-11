@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added optional account filtering feature to process only specific AWS accounts
+- Added `account_filter` parameter to config.ini for specifying comma-separated account IDs
+
 ## [v23.4.5]
 
 ### Changed
