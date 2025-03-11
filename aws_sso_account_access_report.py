@@ -19,6 +19,10 @@ aws_org_id = config.get("DEFAULT", "org_id")
 num_workers = int(config.get("DEFAULT", "num_workers"))
 max_retries = int(config.get("DEFAULT", "max_retries"))
 
+# Get optional account filter (comma-separated list of account IDs)
+account_filter_str = config.get("DEFAULT", "account_filter", fallback="")
+account_filter = [account.strip() for account in account_filter_str.split(",")] if account_filter_str else []
+
 
 @retry(tries=max_retries, jitter=(0, 3), delay=1, backoff=2, max_delay=3)
 def list_groups(identity_store_id: str, region: str) -> List[Dict[str, str]]:
@@ -262,6 +266,12 @@ def main() -> None:
         f"Getting info on org_accounts, permission sets, SSO groups and SSO users"
     )
     org_accounts = list_accounts(aws_org_id, region)
+    
+    # Filter accounts if account_filter is specified
+    if account_filter:
+        logging.info(f"Filtering accounts based on account filter: {account_filter}")
+        org_accounts = [account for account in org_accounts if account["Id"] in account_filter]
+        logging.info(f"Filtered to {len(org_accounts)} accounts")
     perm_sets = list_permission_set_arns(sso_instance_arn, region)
     groups = list_groups(identity_store_id, region)
     users = list_users(identity_store_id, region)
@@ -270,6 +280,7 @@ def main() -> None:
     logging.info(f"Getting info group_members_details")
     group_members_details = []
     for group in groups:
+        logging.info(f"Getting info for {group}")
         group_name = group["DisplayName"]
         group_member_names = []
 
