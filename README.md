@@ -3,7 +3,49 @@ This script generates a CSV report of user access to AWS accounts managed by AWS
 
 ## Prerequisites
 - Python 3.10.8
-- AWS account credentials with appropriate read-only permissions to access AWS SSO, AWS Organizations, and AWS Identity Store
+- AWS account credentials (see Required IAM Permissions section below)
+
+## Required IAM Permissions
+
+The IAM user or role running this script needs the following minimum permissions:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "identitystore:ListGroups",
+                "identitystore:ListUsers",
+                "identitystore:ListGroupMemberships",
+                "sso:ListAccountAssignments",
+                "sso:ListPermissionSets",
+                "sso:DescribePermissionSet",
+                "organizations:ListAccounts"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+### Permissions Breakdown
+
+**Identity Store Permissions:**
+- `identitystore:ListGroups` - Lists all SSO groups in the identity store
+- `identitystore:ListUsers` - Lists all SSO users in the identity store
+- `identitystore:ListGroupMemberships` - Retrieves members of each SSO group
+
+**SSO Admin Permissions:**
+- `sso:ListAccountAssignments` - Lists which users/groups have access to each AWS account
+- `sso:ListPermissionSets` - Lists all permission sets in the SSO instance
+- `sso:DescribePermissionSet` - Retrieves permission set names and details
+
+**Organizations Permissions:**
+- `organizations:ListAccounts` - Lists all AWS accounts in the organization
+
+**Note:** All permissions are read-only and do not allow any modifications to your AWS environment.
 
 ## Configuration
 - Export your AWS Access creds to the environment
